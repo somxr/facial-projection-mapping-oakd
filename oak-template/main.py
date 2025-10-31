@@ -1,5 +1,6 @@
 import depthai as dai
 import cv2
+from depthai_nodes.node import ParsingNeuralNetwork
 
 remoteConnector = dai.RemoteConnection(httpPort=8082)
 device = dai.Device()
@@ -11,6 +12,15 @@ print("socket 0", camera_sensors[0].socket)
 
 # REMEMBER TO PASS DEVICE AS INPUT FOR THE PIPELINE
 with dai.Pipeline(device) as pipeline:
+
+    # face detection model
+    det_model_description = dai.NNModelDescription.fromYamlFile(
+        f"yunet.RVC2.yaml"
+    )
+    det_model_nn_archive = dai.NNArchive(dai.getModelFromZoo(det_model_description))
+
+
+
     # Define source and output
     cam = pipeline.create(dai.node.Camera).build(camera_sensors[0].socket)
     # cam_out = cam.requestOutput((1920,1080), dai.ImgFrame.Type.NV12)
@@ -21,10 +31,18 @@ with dai.Pipeline(device) as pipeline:
     # manip.initialConfig.setOutputSize(300, 300, dai.ImageManipConfig.ResizeMode.CENTER_CROP)
     manip.setMaxOutputFrameSize(4000000)
     manip.initialConfig.addCrop(1521,1140, 1014, 760)
+    manip.initialConfig.setOutputSize(640, 480)
+
     cam_out.link(manip.inputImage)
 
     manipQ = manip.out.createOutputQueue()
     camQ = cam_out.createOutputQueue()
+
+    det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
+        manip.out, det_model_nn_archive
+    )
+
+
 
     pipeline.start()
     # remoteConnector.registerPipeline(pipeline)
