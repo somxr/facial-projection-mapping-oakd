@@ -32,7 +32,7 @@ with dai.Pipeline(device) as pipeline:
 
 
     # face detection model
-    det_model_description = dai.NNModelDescription("luxonis/yunet:640x360")
+    det_model_description = dai.NNModelDescription("luxonis/yunet:640x480")
     det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         manip.out, det_model_description
     )
