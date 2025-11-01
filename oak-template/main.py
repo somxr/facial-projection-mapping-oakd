@@ -22,8 +22,9 @@ with dai.Pipeline(device) as pipeline:
 
     # manip.initialConfig.setOutputSize(300, 300, dai.ImageManipConfig.ResizeMode.CENTER_CROP)
     manip.setMaxOutputFrameSize(4000000)
-    manip.initialConfig.addCrop(1521,1140, 1014, 760)
-    # manip.initialConfig.setOutputSize(640, 480)
+    # manip.initialConfig.addCrop(1521,1140, 1014, 760)
+    manip.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
+    manip.initialConfig.setOutputSize(640, 480)
 
     cam_out.link(manip.inputImage)
 
@@ -37,7 +38,8 @@ with dai.Pipeline(device) as pipeline:
         manip.out, det_model_description
     )
 
-
+    # Create output queue for detections
+    detQ = det_nn.out.createOutputQueue()
 
     pipeline.start()
     # remoteConnector.registerPipeline(pipeline)
@@ -47,6 +49,14 @@ with dai.Pipeline(device) as pipeline:
         # cam_cv_frame = camQ.get().getCvFrame()
 
         # cam_cv_frame
+
+        # How do I get the det_nn results here?
+        detections = detQ.get().detections
+        for detection in detections:
+            # print(detection.rotated_rect)
+            rect: dai.RotatedRect = detection.rotated_rect
+            outer = rect.getOuterRect()  # This returns normalized coords
+            print(outer[0], outer[1], outer[2], outer[3])
 
         if manipQ.has():
             cv2.imshow("Manip frame", manipQ.get().getCvFrame())
