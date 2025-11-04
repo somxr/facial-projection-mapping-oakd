@@ -1,7 +1,17 @@
 import depthai as dai
 import cv2
 from depthai_nodes.node import ParsingNeuralNetwork
-import numpy as np
+from pythonosc import udp_client
+
+#################################################
+###################################################
+OSC_IP = "127.0.0.1"
+OSC_PORT = 9000
+client = udp_client.SimpleUDPClient(OSC_IP, OSC_PORT)
+print(f"Sending OSC data to {OSC_IP}:{OSC_PORT}")
+#########################################################################
+##############################################################
+
 
 remoteConnector = dai.RemoteConnection(httpPort=8082)
 device = dai.Device()
@@ -79,11 +89,17 @@ with dai.Pipeline(device) as pipeline:
                     # Get the 4 corner points
                     points = rect.getPoints()
 
+                    osc_data = []
+
                     # Draw each point as a green circle
                     for point in points:
                         x = int(point.x)
                         y = int(point.y)
                         cv2.circle(frame, (x, y), 5, (0, 255, 0), -1)  # Green filled circles
+
+                        osc_data.append(int(point.x))
+                        osc_data.append(int(point.y))
+                    client.send_message("/face/points", osc_data)
 
             cv2.imshow("Manip frame", frame)
 
