@@ -16,35 +16,36 @@ with dai.Pipeline(device) as pipeline:
 
     # Define source and output
     cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-    # cam_out = cam.requestOutput((1920,1080), dai.ImgFrame.Type.NV12)
-    cam_out = cam.requestFullResolutionOutput()
+    cam_out = cam.requestOutput((1920,1080), dai.ImgFrame.Type.BGR888p)
+    # cam_out = cam.requestFullResolutionOutput()
 
     manip_zoom = pipeline.create(dai.node.ImageManip)
 
     # manip.initialConfig.setOutputSize(300, 300, dai.ImageManipConfig.ResizeMode.CENTER_CROP)
     manip_zoom.setMaxOutputFrameSize(4000000)
-    manip_zoom.initialConfig.addCrop(1521,1140, 1014, 760)
+    #manip_zoom.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
+    manip_zoom.initialConfig.addCrop(640,360, 640, 360)
 
     cam_out.link(manip_zoom.inputImage)
 
 
     manip_zoom_output = manip_zoom.out.createOutputQueue()
 
-    manip_nn_adjustment = pipeline.create(dai.node.ImageManip)
+    # manip_nn_adjustment = pipeline.create(dai.node.ImageManip)
 
-    manip_zoom.out.link(manip_nn_adjustment.inputImage)
+    # manip_zoom.out.link(manip_nn_adjustment.inputImage)
 
-    manip_nn_adjustment.setMaxOutputFrameSize(4000000)
-    manip_nn_adjustment.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
-    manip_nn_adjustment.initialConfig.setOutputSize(640, 480)
+    # manip_nn_adjustment.setMaxOutputFrameSize(4000000)
+    # manip_nn_adjustment.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
+    # manip_nn_adjustment.initialConfig.setOutputSize(640, 480)
 
     camQ = cam_out.createOutputQueue()
 
 
     # face detection model
-    det_model_description = dai.NNModelDescription("luxonis/yunet:640x480")
+    det_model_description = dai.NNModelDescription("luxonis/yunet:640x360")
     det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
-        manip_nn_adjustment.out, det_model_description
+        manip_zoom.out, det_model_description
     )
 
     # Create output queue for detections
