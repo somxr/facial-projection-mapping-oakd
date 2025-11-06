@@ -86,7 +86,7 @@ with dai.Pipeline(device) as pipeline:
                     rect: dai.RotatedRect = detection.rotated_rect
                     rect = rect.denormalize(w, h)
 
-                    # Get the 4 corner points
+                    # Get the 4 corner points, starting from the top left point and going clockwise around the rect points
                     points = rect.getPoints()
 
                     osc_data = []
@@ -97,9 +97,19 @@ with dai.Pipeline(device) as pipeline:
                         y = int(point.y)
                         cv2.circle(frame, (x, y), 5, (0, 255, 0), -1)  # Green filled circles
 
+
+                        # osc_data.append(int(point.x)/w)
+                        # osc_data.append(int(point.y)/h)
                         osc_data.append(int(point.x))
                         osc_data.append(int(point.y))
                     client.send_message("/face/points", osc_data)
+
+                    center = (int((points[0].x + points[1].x)/2), int((points[0].y + points[3].y)/2))
+                    client.send_message("/face/center", [center[0], center[1]])
+
+
+
+                    cv2.circle(frame, center, 5, (0, 0, 255), cv2.FILLED)
 
             cv2.imshow("Manip frame", frame)
 
