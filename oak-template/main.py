@@ -62,6 +62,9 @@ with dai.Pipeline(device) as pipeline:
     detQ = det_nn.out.createOutputQueue()
 
     pipeline.start()
+    #pipeline.getDefaultDevice().setIrLaserDotProjectorIntensity(1.0)
+    pipeline.getDefaultDevice().setIrFloodLightIntensity(1.0)
+
     # remoteConnector.registerPipeline(pipeline)
 
     frame_copy = manip_zoom_output.get().getCvFrame()
