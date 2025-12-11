@@ -29,14 +29,17 @@ FLOOD_STEP = 0.1
 # REMEMBER TO PASS DEVICE AS INPUT FOR THE PIPELINE
 with dai.Pipeline(device) as pipeline:
 
+    #Optimization from the optimization and latency luxonis page: https://docs.luxonis.com/software-v3/depthai/tutorials/optimizing/
+    pipeline.setXLinkChunkSize(0)
+
     # Define source and output
-    cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-    cam_out = cam.requestOutput((1280,800), dai.ImgFrame.Type.BGR888p)
+    #cam = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
+    #cam_out = cam.requestOutput((1280,800), dai.ImgFrame.Type.BGR888p)
     # cam_out = cam.requestFullResolutionOutput()
 
     # Mono camera
     monoLeft = pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
-    monoLeftOut = monoLeft.requestFullResolutionOutput(type=dai.ImgFrame.Type.BGR888p)
+    monoLeftOut = monoLeft.requestFullResolutionOutput(type=dai.ImgFrame.Type.BGR888p, fps=40)
     # leftQueue = monoLeftOut.createOutputQueue()
 
 
@@ -44,13 +47,18 @@ with dai.Pipeline(device) as pipeline:
     manip_zoom = pipeline.create(dai.node.ImageManip)
 
     # manip.initialConfig.setOutputSize(300, 300, dai.ImageManipConfig.ResizeMode.CENTER_CROP)
-    manip_zoom.setMaxOutputFrameSize(4000000)
+    #manip_zoom.setMaxOutputFrameSize(8000000)
     #manip_zoom.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
     manip_zoom.initialConfig.addCrop(320,220, 640, 360)
 
+    ###### Optimizations for ImageManip input queue.#####################################################
+    manip_zoom.inputImage.setBlocking(False) # If queue is full, oldest frame is dropped instead of clogging up the queue and makes a backlog
+
+    #setQueueSize doesn't work anymore apparently, needs to be setMaxSize(1) according to this page: https://discuss.luxonis.com/d/6501-setting-queue-size-and-blocking-on-script-input
+    manip_zoom.inputImage.setMaxSize(1) # Only 1 frame can wait in queue, forcing the node to always process the most recent frame
+    #######################################################################################################
+
     monoLeftOut.link(manip_zoom.inputImage)
-
-
     manip_zoom_output = manip_zoom.out.createOutputQueue()
 
     # manip_nn_adjustment = pipeline.create(dai.node.ImageManip)
@@ -61,7 +69,7 @@ with dai.Pipeline(device) as pipeline:
     # manip_nn_adjustment.initialConfig.setFrameType(dai.ImgFrame.Type.BGR888p)
     # manip_nn_adjustment.initialConfig.setOutputSize(640, 480)
 
-    camQ = cam_out.createOutputQueue()
+    #camQ = cam_out.createOutputQueue()
 
 
     # face detection model
@@ -69,6 +77,10 @@ with dai.Pipeline(device) as pipeline:
     det_nn: ParsingNeuralNetwork = pipeline.create(ParsingNeuralNetwork).build(
         manip_zoom.out, det_model_description
     )
+
+    # Optimizations for Neural Network, same as the imageManip but probably more impactful here
+    det_nn.input.setBlocking(False)
+    det_nn.input.setMaxSize(1)
 
     # Create output queue for detections
     detQ = det_nn.out.createOutputQueue()
